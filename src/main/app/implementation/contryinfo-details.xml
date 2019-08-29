@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <http:request-config name="HTTP_Request_Configuration" host="usecase1-sys-api.us-e2.cloudhub.io" port="80" basePath="/api" doc:name="HTTP Request Configuration"/>
+    <flow name="contryinfo-detailsFlow">
+        <logger level="INFO" doc:name="Logger"/>
+        <http:request config-ref="HTTP_Request_Configuration" path="/countryInfo" method="GET" doc:name="HTTP">
+            <http:request-builder>
+                <http:query-param paramName="countryName" value="#[message.inboundProperties.'http.query.params'.countryName]"/>
+                <http:header headerName="client_secret" value="guafhjavsj"/>
+                <http:header headerName="client_id" value="khkgk"/>
+            </http:request-builder>
+        </http:request>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+            <dw:set-variable variableName="reponse"><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-variable>
+            <dw:set-variable variableName="dbpayload"><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-variable>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/file" method="PUT" doc:name="HTTP">
+            <http:request-builder>
+                <http:header headerName="client_secret" value="guafhjavsj"/>
+                <http:header headerName="client_id" value="dfhfhshb"/>
+            </http:request-builder>
+        </http:request>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+        <logger level="INFO" doc:name="Logger" message="#[payload]"/>
+        <choice doc:name="Choice">
+            <when expression="#[payload.successfulFlag==&quot;yes&quot;]">
+                <logger level="INFO" doc:name="Logger"/>
+                <set-payload value="#[flowVars.dbpayload]" doc:name="Set Payload"/>
+                 <http:request config-ref="HTTP_Request_Configuration" path="/dbInsert" method="PUT" doc:name="HTTP">
+            <http:request-builder>
+                        <http:header headerName="client_secret" value="guafhjavsj"/>
+                        <http:header headerName="client_id" value="dfhfhshb"/>
+            </http:request-builder>
+        </http:request>
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+Message: payload,
+response:flowVars.dbpayload
+}]]></dw:set-payload>
+                </dw:transform-message>
+            </when>
+            <otherwise>
+                <logger level="INFO" doc:name="Logger"/>
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	message:"File updation failed "
+}]]></dw:set-payload>
+                </dw:transform-message>
+            </otherwise>
+        </choice>
+    
+    </flow>
+</mule>
